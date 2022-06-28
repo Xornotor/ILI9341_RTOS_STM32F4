@@ -57,6 +57,31 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define LED_Pin GPIO_PIN_13
+#define LED_GPIO_Port GPIOC
+#define TFT_DC_Pin GPIO_PIN_2
+#define TFT_DC_GPIO_Port GPIOA
+#define TFT_CS_Pin GPIO_PIN_3
+#define TFT_CS_GPIO_Port GPIOA
+#define TFT_RST_Pin GPIO_PIN_4
+#define TFT_RST_GPIO_Port GPIOA
+#define TFT_CLK_Pin GPIO_PIN_5
+#define TFT_CLK_GPIO_Port GPIOA
+#define TFT_MISO_Pin GPIO_PIN_6
+#define TFT_MISO_GPIO_Port GPIOA
+#define TFT_MOSI_Pin GPIO_PIN_7
+#define TFT_MOSI_GPIO_Port GPIOA
+#define TOUCH_CLK_Pin GPIO_PIN_13
+#define TOUCH_CLK_GPIO_Port GPIOB
+#define TOUCH_MISO_Pin GPIO_PIN_14
+#define TOUCH_MISO_GPIO_Port GPIOB
+#define TOUCH_MOSI_Pin GPIO_PIN_15
+#define TOUCH_MOSI_GPIO_Port GPIOB
+#define TOUCH_CS_Pin GPIO_PIN_8
+#define TOUCH_CS_GPIO_Port GPIOA
+#define TOUCH_IRQ_Pin GPIO_PIN_9
+#define TOUCH_IRQ_GPIO_Port GPIOA
+#define TOUCH_IRQ_EXTI_IRQn EXTI9_5_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
