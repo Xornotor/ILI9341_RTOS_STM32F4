@@ -1,84 +1,6 @@
 #include "ILI9341_STM32_Driver.h"
 #include "ILI9341_GFX.h"
 
-/* imprecise small delay */
-__STATIC_INLINE void DelayUs(volatile uint32_t us)
-{
-	us *= (SystemCoreClock / 1000000);
-	while (us--);
-}
-
-void ILI9341_DrawHollowCircle(uint16_t X, uint16_t Y, uint16_t radius, uint16_t color)
-{
-	int x = radius-1;
-	int y = 0;
-	int dx = 1;
-	int dy = 1;
-	int err = dx - (radius << 1);
-
-	while (x >= y)
-	{
-		ILI9341_DrawPixel(X + x, Y + y, color);
-		ILI9341_DrawPixel(X + y, Y + x, color);
-		ILI9341_DrawPixel(X - y, Y + x, color);
-		ILI9341_DrawPixel(X - x, Y + y, color);
-		ILI9341_DrawPixel(X - x, Y - y, color);
-		ILI9341_DrawPixel(X - y, Y - x, color);
-		ILI9341_DrawPixel(X + y, Y - x, color);
-		ILI9341_DrawPixel(X + x, Y - y, color);
-
-		if (err <= 0)
-		{
-			y++;
-			err += dy;
-			dy += 2;
-		}
-
-		if (err > 0)
-		{
-			x--;
-			dx += 2;
-			err += (-radius << 1) + dx;
-		}
-	}
-}
-
-void ILI9341_DrawFilledCircle(uint16_t X, uint16_t Y, uint16_t radius, uint16_t color)
-{
-
-	int x = radius;
-	int y = 0;
-	int xChange = 1 - (radius << 1);
-	int yChange = 0;
-	int radiusError = 0;
-
-	while (x >= y)
-	{
-		for (int i = X - x; i <= X + x; i++)
-		{
-			ILI9341_DrawPixel(i, Y + y,color);
-			ILI9341_DrawPixel(i, Y - y,color);
-		}
-
-		for (int i = X - y; i <= X + y; i++)
-		{
-			ILI9341_DrawPixel(i, Y + x,color);
-			ILI9341_DrawPixel(i, Y - x,color);
-		}
-
-		y++;
-		radiusError += yChange;
-		yChange += 2;
-
-		if (((radiusError << 1) + xChange) > 0)
-		{
-			x--;
-			radiusError += xChange;
-			xChange += 2;
-		}
-	}
-}
-
 void ILI9341_DrawHollowRectangleCoord(uint16_t X0, uint16_t Y0, uint16_t X1, uint16_t Y1, uint16_t color)
 {
 	uint16_t xLen = 0;
@@ -223,39 +145,5 @@ void ILI9341_DrawText(const char* str, const uint8_t font[], uint16_t X, uint16_
 		}
 
 		str++;
-	}
-}
-
-void ILI9341_DrawImage(const uint8_t* image, uint8_t orientation)
-{
-	if(orientation == SCREEN_HORIZONTAL_1)
-	{
-		ILI9341_SetRotation(SCREEN_HORIZONTAL_1);
-		ILI9341_SetAddress(0,0,ILI9341_SCREEN_WIDTH,ILI9341_SCREEN_HEIGHT);
-	}
-	else if(orientation == SCREEN_HORIZONTAL_2)
-	{
-		ILI9341_SetRotation(SCREEN_HORIZONTAL_2);
-		ILI9341_SetAddress(0,0,ILI9341_SCREEN_WIDTH,ILI9341_SCREEN_HEIGHT);
-	}
-	else if(orientation == SCREEN_VERTICAL_2)
-	{
-		ILI9341_SetRotation(SCREEN_VERTICAL_2);
-		ILI9341_SetAddress(0,0,ILI9341_SCREEN_HEIGHT,ILI9341_SCREEN_WIDTH);
-	}
-	else if(orientation == SCREEN_VERTICAL_1)
-	{
-		ILI9341_SetRotation(SCREEN_VERTICAL_1);
-		ILI9341_SetAddress(0,0,ILI9341_SCREEN_HEIGHT,ILI9341_SCREEN_WIDTH);
-	}
-
-	uint32_t counter = 0;
-	for(uint32_t i = 0; i < ILI9341_SCREEN_WIDTH*ILI9341_SCREEN_HEIGHT*2/BURST_MAX_SIZE; i++)
-	{
-		ILI9341_WriteBuffer((uint8_t*)(image + counter), BURST_MAX_SIZE);
-		counter += BURST_MAX_SIZE;
-
-		/* DMA Tx is too fast, It needs some delay */
-		DelayUs(1);
 	}
 }
