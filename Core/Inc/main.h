@@ -71,17 +71,15 @@ void Error_Handler(void);
 #define TFT_MISO_GPIO_Port GPIOA
 #define TFT_MOSI_Pin GPIO_PIN_7
 #define TFT_MOSI_GPIO_Port GPIOA
-#define TOUCH_CLK_Pin GPIO_PIN_13
-#define TOUCH_CLK_GPIO_Port GPIOB
-#define TOUCH_MISO_Pin GPIO_PIN_14
-#define TOUCH_MISO_GPIO_Port GPIOB
-#define TOUCH_MOSI_Pin GPIO_PIN_15
-#define TOUCH_MOSI_GPIO_Port GPIOB
-#define TOUCH_CS_Pin GPIO_PIN_8
-#define TOUCH_CS_GPIO_Port GPIOA
-#define TOUCH_IRQ_Pin GPIO_PIN_9
-#define TOUCH_IRQ_GPIO_Port GPIOA
-#define TOUCH_IRQ_EXTI_IRQn EXTI9_5_IRQn
+#define BTN_1_Pin GPIO_PIN_11
+#define BTN_1_GPIO_Port GPIOA
+#define BTN_1_EXTI_IRQn EXTI15_10_IRQn
+#define BTN_2_Pin GPIO_PIN_12
+#define BTN_2_GPIO_Port GPIOA
+#define BTN_2_EXTI_IRQn EXTI15_10_IRQn
+#define BTN_3_Pin GPIO_PIN_15
+#define BTN_3_GPIO_Port GPIOA
+#define BTN_3_EXTI_IRQn EXTI15_10_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
