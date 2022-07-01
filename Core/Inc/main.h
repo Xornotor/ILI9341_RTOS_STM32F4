@@ -71,15 +71,15 @@ void Error_Handler(void);
 #define TFT_MISO_GPIO_Port GPIOA
 #define TFT_MOSI_Pin GPIO_PIN_7
 #define TFT_MOSI_GPIO_Port GPIOA
-#define BTN_1_Pin GPIO_PIN_11
-#define BTN_1_GPIO_Port GPIOA
-#define BTN_1_EXTI_IRQn EXTI15_10_IRQn
+#define BTN_3_Pin GPIO_PIN_11
+#define BTN_3_GPIO_Port GPIOA
+#define BTN_3_EXTI_IRQn EXTI15_10_IRQn
 #define BTN_2_Pin GPIO_PIN_12
 #define BTN_2_GPIO_Port GPIOA
 #define BTN_2_EXTI_IRQn EXTI15_10_IRQn
-#define BTN_3_Pin GPIO_PIN_15
-#define BTN_3_GPIO_Port GPIOA
-#define BTN_3_EXTI_IRQn EXTI15_10_IRQn
+#define BTN_1_Pin GPIO_PIN_15
+#define BTN_1_GPIO_Port GPIOA
+#define BTN_1_EXTI_IRQn EXTI15_10_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
