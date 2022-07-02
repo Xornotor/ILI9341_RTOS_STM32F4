@@ -9,6 +9,7 @@
 #include "ILI9341_GFX.h"
 #include "ILI9341_STM32_Driver.h"
 #include "FreeRTOS.h"
+#include "queue.h"
 
 #define TELA1 1
 #define TELA2 2
@@ -21,16 +22,22 @@ TaskHandle_t displayHandler = NULL;
 TaskHandle_t IRQHandlerScreen1 = NULL;
 TaskHandle_t IRQHandlerScreen2 = NULL;
 TaskHandle_t IRQHandlerScreen3 = NULL;
+QueueHandle_t queueTeste;
 
 void vDisplayManager(void *p);
 void vTaskScreenIRQ1(void *p);
 void vTaskScreenIRQ2(void *p);
 void vTaskScreenIRQ3(void *p);
+void vTaskTestDataGenerator(void *p);
+void vTaskTestDataReader(void *p);
 void baseTela(uint16_t);
 void dadosTela(uint16_t);
 
 // Task Creations e Inicialização do RTOS
 void userRTOS(void){
+
+
+	queueTeste =  xQueueCreate(10, sizeof(double));
 
     xTaskCreate(vTaskScreenIRQ1,
     			"irq1",
@@ -59,6 +66,20 @@ void userRTOS(void){
 				(void*) 0,
 				1,
 				&displayHandler);
+
+    xTaskCreate(vTaskTestDataGenerator,
+        			"testDataGenerator",
+    				128,
+    				(void*) 0,
+    				2,
+    				NULL);
+
+    xTaskCreate(vTaskTestDataReader,
+            			"testDataReader",
+        				128,
+        				(void*) 0,
+        				2,
+        				NULL);
 
     vTaskStartScheduler();
 
@@ -103,6 +124,30 @@ void vTaskScreenIRQ3(void *p) {
         tela_atual = TELA3;
     }
 }
+
+// Task de test de geração de dados e envio pra queue
+void vTaskTestDataGenerator(void *p) {
+	TickType_t xLastWakeTime = xTaskGetTickCount();
+	double data = 20.5;
+	while (1) {
+		xQueueSendToBack(queueTeste, &data, 0);
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
+	}
+}
+
+// Task de test de leitura de dados da queue
+void vTaskTestDataReader(void *p) {
+	TickType_t xLastWakeTime = xTaskGetTickCount();
+	double data;
+	while (1) {
+		xQueueReceive(queueTeste, &data, 0);
+		char testecharcasa2[10];
+		sprintf(testecharcasa2, "%3.1f", data);
+		ILI9341_DrawText(testecharcasa2, FONT3, 165, 180, WHITE, BLACK);
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
+	}
+}
+
 
 // Função de inicialização da tela executada antes da inicialização do RTOS
 void inicializar(void){
