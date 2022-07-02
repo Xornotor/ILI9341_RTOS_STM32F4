@@ -76,7 +76,7 @@ void vDisplayManager(void *p){
 			baseTela(tela_atual);
 		}
 		dadosTela(tela_atual);
-		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(333));
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
 	}
 }
 
@@ -113,23 +113,39 @@ void inicializar(void){
 
 // Funções de geração de vídeo
 
+// Base para plotagem de gráfico
+void funcGraph(void){
+	ILI9341_DrawFilledRectangleCoord(35, 70, 39, 190, WHITE);
+	ILI9341_DrawFilledRectangleCoord(35, 186, 285, 190, WHITE);
+	ILI9341_DrawVLine(40, 186, 11, WHITE);
+	ILI9341_DrawVLine(99, 186, 11, WHITE);
+	ILI9341_DrawVLine(158, 186, 11, WHITE);
+	ILI9341_DrawVLine(217, 186, 11, WHITE);
+	ILI9341_DrawVLine(276, 186, 11, WHITE);
+	ILI9341_DrawHLine(28, 77, 11, WHITE);
+	ILI9341_DrawHLine(28, 104, 11, WHITE);
+	ILI9341_DrawHLine(28, 131, 11, WHITE);
+	ILI9341_DrawHLine(28, 158, 11, WHITE);
+	ILI9341_DrawHLine(28, 185, 11, WHITE);
+}
+
 // Base da Tela 1
 void funcTela1(void){
 	ILI9341_DrawText("Tela 1 - Velocidades e Posicao", FONT4, 25, 9, WHITE, NAVY);
 	ILI9341_DrawText("Veloc. X:", FONT3, 25, 60, CYAN, BLACK);
 	ILI9341_DrawText("Veloc. Y:", FONT3, 25, 120, MAGENTA, BLACK);
-	ILI9341_DrawText("w:", FONT3, 25, 180, YELLOW, BLACK);
+	ILI9341_DrawText("W:", FONT3, 25, 180, YELLOW, BLACK);
 	ILI9341_DrawText("Pos. X:", FONT3, 165, 60, GREEN, BLACK);
 	ILI9341_DrawText("Pos. Y:", FONT3, 165, 120, RED, BLACK);
 
 	double teste = 12.3456789;
-	char testecharcasa1[10];
-	char testecharcasa2[10];
-	sprintf(testecharcasa1, "%3.1f", teste);
-	sprintf(testecharcasa2, "%4.2f", teste);
+	char testecharcasa1[20], testecharcasa2[20], testecharcasarad[20];
+	sprintf(testecharcasa1, "%0.1f cm/s   ", teste);
+	sprintf(testecharcasarad, "%0.1f rad/s   ", teste);
+	sprintf(testecharcasa2, "%0.2f cm   ", teste);
 	ILI9341_DrawText(testecharcasa1, FONT4, 25, 80, CYAN, BLACK);
 	ILI9341_DrawText(testecharcasa1, FONT4, 25, 140, MAGENTA, BLACK);
-	ILI9341_DrawText(testecharcasa1, FONT4, 25, 200, YELLOW, BLACK);
+	ILI9341_DrawText(testecharcasarad, FONT4, 25, 200, YELLOW, BLACK);
 	ILI9341_DrawText(testecharcasa2, FONT4, 165, 80, GREEN, BLACK);
 	ILI9341_DrawText(testecharcasa2, FONT4, 165, 140, RED, BLACK);
 }
@@ -137,17 +153,15 @@ void funcTela1(void){
 // Base da Tela 2
 void funcTela2(void){
 	ILI9341_DrawText("Tela 2 - Graficos Vel. Angular", FONT4, 25, 9, WHITE, NAVY);
-	ILI9341_DrawFilledRectangleCoord(35, 70, 39, 190, WHITE);
-	ILI9341_DrawFilledRectangleCoord(35, 186, 285, 190, WHITE);
-	ILI9341_DrawVLine(97, 186, 11, WHITE);
-	ILI9341_DrawVLine(157, 186, 11, WHITE);
-	ILI9341_DrawVLine(217, 186, 11, WHITE);
-	ILI9341_DrawVLine(277, 186, 11, WHITE);
 	ILI9341_DrawText("rad/s", FONT2, 24, 50, WHITE, BLACK);
 	ILI9341_DrawText("s", FONT2, 295, 182, WHITE, BLACK);
+
+	funcGraph();
+
 	ILI9341_DrawFilledRectangleCoord(20, 220, 100, 240, CYAN);
 	ILI9341_DrawFilledRectangleCoord(120, 220, 200, 240, MAGENTA);
 	ILI9341_DrawFilledRectangleCoord(220, 220, 300, 240, YELLOW);
+
 	ILI9341_DrawText("Motor 1", FONT3, 32, 224, BLACK, CYAN);
 	ILI9341_DrawText("Motor 2", FONT3, 132, 224, BLACK, MAGENTA);
 	ILI9341_DrawText("Motor 3", FONT3, 232, 224, BLACK, YELLOW);
@@ -156,17 +170,15 @@ void funcTela2(void){
 // Base da Tela 3
 void funcTela3(void){
 	ILI9341_DrawText("Tela 3 - Graficos Correntes", FONT4, 38, 9, WHITE, NAVY);
-	ILI9341_DrawFilledRectangleCoord(35, 70, 39, 190, WHITE);
-	ILI9341_DrawFilledRectangleCoord(35, 186, 285, 190, WHITE);
-	ILI9341_DrawVLine(97, 186, 11, WHITE);
-	ILI9341_DrawVLine(157, 186, 11, WHITE);
-	ILI9341_DrawVLine(217, 186, 11, WHITE);
-	ILI9341_DrawVLine(277, 186, 11, WHITE);
-	ILI9341_DrawText("A", FONT2, 33, 50, WHITE, BLACK);
+	ILI9341_DrawText("A", FONT2, 34, 50, WHITE, BLACK);
 	ILI9341_DrawText("s", FONT2, 295, 182, WHITE, BLACK);
+
+	funcGraph();
+
 	ILI9341_DrawFilledRectangleCoord(20, 220, 100, 240, LIGHTBLUE);
 	ILI9341_DrawFilledRectangleCoord(120, 220, 200, 240, DARKORANGE);
 	ILI9341_DrawFilledRectangleCoord(220, 220, 300, 240, GREENYELLOW);
+
 	ILI9341_DrawText("Motor 1", FONT3, 32, 224, BLACK, LIGHTBLUE);
 	ILI9341_DrawText("Motor 2", FONT3, 132, 224, BLACK, DARKORANGE);
 	ILI9341_DrawText("Motor 3", FONT3, 232, 224, BLACK, GREENYELLOW);
