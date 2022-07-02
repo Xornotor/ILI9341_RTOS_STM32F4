@@ -74,18 +74,18 @@ void userRTOS(void){
 				&displayHandler);
 
     xTaskCreate(vTaskTestDataGenerator,
-        			"testDataGenerator",
-    				512,
-    				(void*) 0,
-    				2,
-    				NULL);
+        		"testDataGenerator",
+    			2048,
+    			(void*) 0,
+    			512,
+    			NULL);
 
     xTaskCreate(vTaskTestDataReader,
-            			"testDataReader",
-        				512,
-        				(void*) 0,
-        				2,
-        				NULL);
+            	"testDataReader",
+        		512,
+        		(void*) 0,
+        		512,
+        		NULL);
 
     vTaskStartScheduler();
 
@@ -96,8 +96,9 @@ void userRTOS(void){
 
 // Task de gerenciamento da tela
 void vDisplayManager(void *p){
-	TickType_t xLastWakeTime = xTaskGetTickCount();
+	TickType_t xLastWakeTime;
 	while(1){
+		xLastWakeTime = xTaskGetTickCount();
 		if(tela_atual != tela_anterior){
 			tela_anterior = tela_atual;
 			baseTela(tela_atual);
@@ -133,25 +134,33 @@ void vTaskScreenIRQ3(void *p) {
 
 // Task de test de geração de dados e envio pra queue
 void vTaskTestDataGenerator(void *p) {
-	TickType_t xLastWakeTime = xTaskGetTickCount();
+	TickType_t xLastWakeTime;
 	struct Teste generated;
-	while (1) {
-		generated.xa = 1.2;
-		generated.xb = 2.3;
-		xQueueSendToBack(queueTeste, &generated, 0);
-		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
+	generated.xa = 1.2;
+	generated.xb = 2.3;
+	while(1) {
+		xLastWakeTime = xTaskGetTickCount();
+		if(xQueueSendToBack(queueTeste, &generated, 0) == errQUEUE_FULL)
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
+		generated.xa += 0.5;
+		generated.xb += 0.3;
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(100));
 	}
 }
 
 // Task de test de leitura de dados da queue
 void vTaskTestDataReader(void *p) {
-	TickType_t xLastWakeTime = xTaskGetTickCount();
+	TickType_t xLastWakeTime;
 	struct Teste readGenerated;
 	while (1) {
-		xQueueReceive(queueTeste, &readGenerated, 0);
+		xLastWakeTime = xTaskGetTickCount();
+		while(xQueueReceive(queueTeste, &readGenerated, 0) != errQUEUE_EMPTY);
+		char testecharcasa1[10];
 		char testecharcasa2[10];
-		sprintf(testecharcasa2, readGenerated.xa, data);
-		ILI9341_DrawText(testecharcasa2, FONT3, 165, 180, WHITE, BLACK);
+		sprintf(testecharcasa1, "%0.1f", readGenerated.xa);
+		sprintf(testecharcasa2, "%0.1f", readGenerated.xb);
+		ILI9341_DrawText(testecharcasa1, FONT3, 165, 180, WHITE, BLACK);
+		ILI9341_DrawText(testecharcasa2, FONT3, 165, 205, WHITE, BLACK);
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
 	}
 }
