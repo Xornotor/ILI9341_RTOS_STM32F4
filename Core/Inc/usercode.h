@@ -131,7 +131,7 @@ void vTaskTestDataGenerator(void *p) {
 	double data = 20.5;
 	while (1) {
 		xQueueSendToBack(queueTeste, &data, 0);
-		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(333));
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
 	}
 }
 
@@ -143,6 +143,8 @@ void vTaskTestDataReader(void *p) {
 		xQueueReceive(queueTeste, &data, 0);
 		char testecharcasa2[10];
 		sprintf(testecharcasa2, "%3.1f", data);
+		ILI9341_DrawText(testecharcasa2, FONT3, 165, 180, WHITE, BLACK);
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
 	}
 }
 
