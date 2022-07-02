@@ -33,11 +33,17 @@ void vTaskTestDataReader(void *p);
 void baseTela(uint16_t);
 void dadosTela(uint16_t);
 
+struct Teste
+    {
+        double    xa;
+        double    xb;
+    } Teste_Struct;
+
 // Task Creations e Inicialização do RTOS
 void userRTOS(void){
 
 
-	queueTeste =  xQueueCreate(10, sizeof(double));
+	queueTeste =  xQueueCreate(10, sizeof(Teste_Struct));
 
     xTaskCreate(vTaskScreenIRQ1,
     			"irq1",
@@ -69,14 +75,14 @@ void userRTOS(void){
 
     xTaskCreate(vTaskTestDataGenerator,
         			"testDataGenerator",
-    				128,
+    				512,
     				(void*) 0,
     				2,
     				NULL);
 
     xTaskCreate(vTaskTestDataReader,
             			"testDataReader",
-        				128,
+        				512,
         				(void*) 0,
         				2,
         				NULL);
@@ -128,9 +134,11 @@ void vTaskScreenIRQ3(void *p) {
 // Task de test de geração de dados e envio pra queue
 void vTaskTestDataGenerator(void *p) {
 	TickType_t xLastWakeTime = xTaskGetTickCount();
-	double data = 20.5;
+	struct Teste generated;
 	while (1) {
-		xQueueSendToBack(queueTeste, &data, 0);
+		generated.xa = 1.2;
+		generated.xb = 2.3;
+		xQueueSendToBack(queueTeste, &generated, 0);
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
 	}
 }
@@ -138,11 +146,11 @@ void vTaskTestDataGenerator(void *p) {
 // Task de test de leitura de dados da queue
 void vTaskTestDataReader(void *p) {
 	TickType_t xLastWakeTime = xTaskGetTickCount();
-	double data;
+	struct Teste readGenerated;
 	while (1) {
-		xQueueReceive(queueTeste, &data, 0);
+		xQueueReceive(queueTeste, &readGenerated, 0);
 		char testecharcasa2[10];
-		sprintf(testecharcasa2, "%3.1f", data);
+		sprintf(testecharcasa2, readGenerated.xa, data);
 		ILI9341_DrawText(testecharcasa2, FONT3, 165, 180, WHITE, BLACK);
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
 	}
