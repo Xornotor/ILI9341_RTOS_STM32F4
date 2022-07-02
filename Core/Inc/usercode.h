@@ -26,8 +26,8 @@ void vDisplayManager(void *p);
 void vTaskScreenIRQ1(void *p);
 void vTaskScreenIRQ2(void *p);
 void vTaskScreenIRQ3(void *p);
-void plotarTela(uint16_t);
-
+void baseTela(uint16_t);
+void dadosTela(uint16_t);
 
 // Task Creations e Inicialização do RTOS
 void userRTOS(void){
@@ -73,10 +73,10 @@ void vDisplayManager(void *p){
 	while(1){
 		if(tela_atual != tela_anterior){
 			tela_anterior = tela_atual;
-			plotarTela(tela_atual);
+			baseTela(tela_atual);
 		}
-
-		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(250));
+		dadosTela(tela_atual);
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(333));
 	}
 }
 
@@ -108,24 +108,72 @@ void vTaskScreenIRQ3(void *p) {
 void inicializar(void){
 	ILI9341_Init();
 	ILI9341_SetRotation(SCREEN_HORIZONTAL_2);
-	plotarTela(tela_atual);
+	baseTela(tela_atual);
 }
 
 // Funções de geração de vídeo
 
+// Base da Tela 1
 void funcTela1(void){
 	ILI9341_DrawText("Tela 1 - Velocidades e Posicao", FONT4, 25, 9, WHITE, NAVY);
+	ILI9341_DrawText("Veloc. X:", FONT3, 25, 60, CYAN, BLACK);
+	ILI9341_DrawText("Veloc. Y:", FONT3, 25, 120, MAGENTA, BLACK);
+	ILI9341_DrawText("w:", FONT3, 25, 180, YELLOW, BLACK);
+	ILI9341_DrawText("Pos. X:", FONT3, 165, 60, GREEN, BLACK);
+	ILI9341_DrawText("Pos. Y:", FONT3, 165, 120, RED, BLACK);
+
+	double teste = 12.3456789;
+	char testecharcasa1[10];
+	char testecharcasa2[10];
+	sprintf(testecharcasa1, "%3.1f", teste);
+	sprintf(testecharcasa2, "%4.2f", teste);
+	ILI9341_DrawText(testecharcasa1, FONT4, 25, 80, CYAN, BLACK);
+	ILI9341_DrawText(testecharcasa1, FONT4, 25, 140, MAGENTA, BLACK);
+	ILI9341_DrawText(testecharcasa1, FONT4, 25, 200, YELLOW, BLACK);
+	ILI9341_DrawText(testecharcasa2, FONT4, 165, 80, GREEN, BLACK);
+	ILI9341_DrawText(testecharcasa2, FONT4, 165, 140, RED, BLACK);
 }
 
+// Base da Tela 2
 void funcTela2(void){
 	ILI9341_DrawText("Tela 2 - Graficos Vel. Angular", FONT4, 25, 9, WHITE, NAVY);
+	ILI9341_DrawFilledRectangleCoord(35, 70, 39, 190, WHITE);
+	ILI9341_DrawFilledRectangleCoord(35, 186, 285, 190, WHITE);
+	ILI9341_DrawVLine(97, 186, 11, WHITE);
+	ILI9341_DrawVLine(157, 186, 11, WHITE);
+	ILI9341_DrawVLine(217, 186, 11, WHITE);
+	ILI9341_DrawVLine(277, 186, 11, WHITE);
+	ILI9341_DrawText("rad/s", FONT2, 24, 50, WHITE, BLACK);
+	ILI9341_DrawText("s", FONT2, 295, 182, WHITE, BLACK);
+	ILI9341_DrawFilledRectangleCoord(20, 220, 100, 240, CYAN);
+	ILI9341_DrawFilledRectangleCoord(120, 220, 200, 240, MAGENTA);
+	ILI9341_DrawFilledRectangleCoord(220, 220, 300, 240, YELLOW);
+	ILI9341_DrawText("Motor 1", FONT3, 32, 224, BLACK, CYAN);
+	ILI9341_DrawText("Motor 2", FONT3, 132, 224, BLACK, MAGENTA);
+	ILI9341_DrawText("Motor 3", FONT3, 232, 224, BLACK, YELLOW);
 }
 
+// Base da Tela 3
 void funcTela3(void){
 	ILI9341_DrawText("Tela 3 - Graficos Correntes", FONT4, 38, 9, WHITE, NAVY);
+	ILI9341_DrawFilledRectangleCoord(35, 70, 39, 190, WHITE);
+	ILI9341_DrawFilledRectangleCoord(35, 186, 285, 190, WHITE);
+	ILI9341_DrawVLine(97, 186, 11, WHITE);
+	ILI9341_DrawVLine(157, 186, 11, WHITE);
+	ILI9341_DrawVLine(217, 186, 11, WHITE);
+	ILI9341_DrawVLine(277, 186, 11, WHITE);
+	ILI9341_DrawText("A", FONT2, 33, 50, WHITE, BLACK);
+	ILI9341_DrawText("s", FONT2, 295, 182, WHITE, BLACK);
+	ILI9341_DrawFilledRectangleCoord(20, 220, 100, 240, LIGHTBLUE);
+	ILI9341_DrawFilledRectangleCoord(120, 220, 200, 240, DARKORANGE);
+	ILI9341_DrawFilledRectangleCoord(220, 220, 300, 240, GREENYELLOW);
+	ILI9341_DrawText("Motor 1", FONT3, 32, 224, BLACK, LIGHTBLUE);
+	ILI9341_DrawText("Motor 2", FONT3, 132, 224, BLACK, DARKORANGE);
+	ILI9341_DrawText("Motor 3", FONT3, 232, 224, BLACK, GREENYELLOW);
 }
 
-void plotarTela(uint16_t numTela){
+// Seleção de base de tela
+void baseTela(uint16_t numTela){
 	ILI9341_DrawFilledRectangleCoord(0, 0, 320, 36, NAVY);
 	ILI9341_DrawFilledRectangleCoord(0, 36, 320, 240, BLACK);
 	switch(numTela){
@@ -137,6 +185,19 @@ void plotarTela(uint16_t numTela){
 			break;
 		case TELA3:
 			funcTela3();
+			break;
+		default:
+			break;
+	}
+}
+
+void dadosTela(uint16_t numTela){
+	switch(numTela){
+		case TELA1:
+			break;
+		case TELA2:
+			break;
+		case TELA3:
 			break;
 		default:
 			break;

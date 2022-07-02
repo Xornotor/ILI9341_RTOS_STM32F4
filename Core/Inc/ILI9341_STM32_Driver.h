@@ -38,6 +38,8 @@ extern SPI_HandleTypeDef hspi1;
 #define ORANGE      			0xFD20
 #define GREENYELLOW 			0xAFE5
 #define PINK        			0xF81F
+#define LIGHTBLUE				0x86DE
+#define	DARKORANGE				0xDB84
 
 #define SCREEN_VERTICAL_1		0
 #define SCREEN_HORIZONTAL_1		1
