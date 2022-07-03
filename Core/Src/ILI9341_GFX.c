@@ -173,14 +173,14 @@ void ILI9341_DrawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16
     // vertical line
     if (0 == dy)
       { return; } // distance = 0, no line to draw
-	ILI9341_DrawFilledRectangleCoord(x0, y0, 1, dy, color);
+	ILI9341_DrawVLine(x0, y0, dy, color);
     return;
   }
   else if (0 == dy) {
     // horizontal line
     if (0 == dx)
       { return; } // distance = 0, no line to draw
-    ILI9341_DrawFilledRectangleCoord(x0, y0, dx, 1, color);
+    ILI9341_DrawHLine(x0, y0, dx, color);
     return;
   }
 
