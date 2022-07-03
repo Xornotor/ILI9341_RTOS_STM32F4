@@ -13,6 +13,6 @@ typedef struct {
 
 typedef struct {
 	dataset dados[TAMANHO_BUFFER];
-	int startIndex;
-	int posicoesPreenchidas;
+	uint16_t startIndex;
+	uint16_t posicoesPreenchidas;
 } circle_buffer;
