@@ -25,7 +25,7 @@
 #define TELA2 2
 #define TELA3 3
 
-#define REFRESH_TELA 500
+#define REFRESH_TELA 250
 
 uint16_t sTelaAnterior = TELA1;
 uint16_t sTelaAtual = TELA1;
@@ -35,6 +35,8 @@ uint16_t sTelaAtual = TELA1;
 
 dataset xVelLinearAtual;
 dataset xPosicaoAtual;
+circle_buffer xBufferCorrente;
+circle_buffer xBufferVelW;
 
 /* ===========================HANDLERS============================ */
 
@@ -77,6 +79,9 @@ void funcDadosTela1(void);
 void funcDadosTela2(void);
 void funcDadosTela3(void);
 void dadosTela(uint16_t);
+void insereDadosVelocidade(dataset);
+void insereDadosCorrente(dataset);
+dataset getDadosBuffer(uint16_t, circle_buffer*);
 
 
 /* =====================INICIALIZAÇÃO DO RTOS===================== */
@@ -92,6 +97,11 @@ void userRTOS(void){
 	xQueueCorrente = xQueueCreate(30, sizeof(dataset));
 	xQueueVelW = xQueueCreate(30, sizeof(dataset));
 	xQueuePosicao = xQueueCreate(3, sizeof(dataset));
+
+	xBufferVelW.startIndex = 0;
+	xBufferCorrente.startIndex = 0;
+	xBufferVelW.posicoesPreenchidas = 0;
+	xBufferCorrente.posicoesPreenchidas = 0;
 
 	xTaskCreate(vTaskScreenIRQ1,
 				"irq1",
@@ -256,15 +266,12 @@ void vTaskGeradorPosicao(void *p) {
 
 // Leitura de dados de corrente da queue
 void vTaskQueueCorrenteReader(void *p) {
-	const TickType_t xMaxMutexDelay = pdMS_TO_TICKS(1);
 	TickType_t xLastWakeTime;
 	dataset corrente;
 	while (1) {
 		xLastWakeTime = xTaskGetTickCount();
 		while(xQueueReceive(xQueueCorrente, &corrente, 0) != errQUEUE_EMPTY){
-			if(xSemaphoreTake(xMutexBufferCorrente, xMaxMutexDelay) == pdPASS){
-
-			}
+			insereDadosCorrente(corrente);
 		}
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
 	}
@@ -290,9 +297,7 @@ void vTaskQueueVelWReader(void *p) {
 	while (1) {
 		xLastWakeTime = xTaskGetTickCount();
 		while(xQueueReceive(xQueueVelW, &velW, 0) != errQUEUE_EMPTY){
-			if(xSemaphoreTake(xMutexBufferVelW, xMaxMutexDelay) == pdPASS){
-
-			}
+			insereDadosVelocidade(velW);
 		}
 		linearVX = r_cm*(2.0/3.0)*(-(sin_alpha1*velW.x)-(sin_alpha2*velW.y)-(sin_alpha3*velW.z));
 		linearVY = r_cm*(2.0/3.0)*((cos_alpha1*velW.x)+(cos_alpha2*velW.y)+(cos_alpha3*velW.z));
@@ -388,10 +393,10 @@ void funcBaseGraph(void){
 	ILI9341_DrawRectangle(35, 70, 4, 120, WHITE);
 	ILI9341_DrawRectangle(35, 186, 250, 4, WHITE);
 	ILI9341_DrawVLine(40, 186, 11, WHITE);
-	ILI9341_DrawVLine(99, 186, 11, WHITE);
-	ILI9341_DrawVLine(158, 186, 11, WHITE);
-	ILI9341_DrawVLine(217, 186, 11, WHITE);
-	ILI9341_DrawVLine(276, 186, 11, WHITE);
+	ILI9341_DrawVLine(100, 186, 11, WHITE);
+	ILI9341_DrawVLine(160, 186, 11, WHITE);
+	ILI9341_DrawVLine(220, 186, 11, WHITE);
+	ILI9341_DrawVLine(280, 186, 11, WHITE);
 	ILI9341_DrawHLine(28, 77, 11, WHITE);
 	ILI9341_DrawHLine(28, 104, 11, WHITE);
 	ILI9341_DrawHLine(28, 131, 11, WHITE);
@@ -521,14 +526,47 @@ void funcDadosTela1(void){
 }
 
 void funcDadosTela2(void){
+	const TickType_t xMaxMutexDelay = pdMS_TO_TICKS(1);
+	circle_buffer tempBuffer;
+	uint16_t pixelX = 40;
+	float pixelYfloat;
+	uint16_t pixelY;
+	dataset tempDataset;
 	ILI9341_DrawRectangle(39, 70, 246, 116, BLACK);
-	funcScaleXGraph(0, 20);
+	if(xSemaphoreTake(xMutexBufferVelW, xMaxMutexDelay) == pdPASS){
+		tempBuffer = xBufferVelW;
+		xSemaphoreGive(xMutexBufferVelW);
+	}
+	for(uint16_t i = 0; i < tempBuffer.posicoesPreenchidas; i++){
+		tempDataset = getDadosBuffer(i, &tempBuffer);
+		pixelYfloat = 185 - tempDataset.x*(116.0/32.0);
+		pixelY = pixelYfloat;
+		ILI9341_DrawPixel(pixelX, pixelY, ORANGE);
+		pixelX += 6;
+	}
 }
 
 void funcDadosTela3(void){
+	const TickType_t xMaxMutexDelay = pdMS_TO_TICKS(1);
+	circle_buffer tempBuffer;
+	uint16_t pixelX = 40;
+	float pixelYfloat;
+	uint16_t pixelY;
+	dataset tempDataset;
 	ILI9341_DrawRectangle(39, 70, 246, 116, BLACK);
-	funcScaleXGraph(500, 1000);
+	if(xSemaphoreTake(xMutexBufferCorrente, xMaxMutexDelay) == pdPASS){
+		tempBuffer = xBufferCorrente;
+		xSemaphoreGive(xMutexBufferCorrente);
+	}
+	for(uint16_t i = 0; i < tempBuffer.posicoesPreenchidas; i++){
+		tempDataset = getDadosBuffer(i, &tempBuffer);
+		pixelYfloat = 185 - tempDataset.x*(116.0/4.0);
+		pixelY = pixelYfloat;
+		ILI9341_DrawPixel(pixelX, pixelY, ORANGE);
+		pixelX += 6;
+	}
 }
+
 
 // Exibição de dados na tela
 void dadosTela(uint16_t sNumTela){
@@ -544,5 +582,52 @@ void dadosTela(uint16_t sNumTela){
 			break;
 		default:
 			break;
+	}
+}
+
+// Função de adicionar dados ao buffer circular de velocidade
+void insereDadosVelocidade(dataset velocidade) {
+	const TickType_t xMaxMutexDelay = pdMS_TO_TICKS(1);
+	if(xSemaphoreTake(xMutexBufferVelW, xMaxMutexDelay) == pdPASS){
+		xBufferVelW.dados[xBufferVelW.startIndex] = velocidade;
+		xBufferVelW.startIndex++;
+
+		if (xBufferVelW.startIndex >= TAMANHO_BUFFER) {
+			xBufferVelW.startIndex = 0;
+		}
+
+		if (xBufferVelW.posicoesPreenchidas < TAMANHO_BUFFER) {
+			xBufferVelW.posicoesPreenchidas++;
+		}
+		xSemaphoreGive(xMutexBufferVelW);
+	}
+}
+
+// Função de adicionar dados ao buffer circular de corrent
+void insereDadosCorrente(dataset corrente) {
+	const TickType_t xMaxMutexDelay = pdMS_TO_TICKS(1);
+	if(xSemaphoreTake(xMutexBufferCorrente, xMaxMutexDelay) == pdPASS){
+		xBufferCorrente.dados[xBufferCorrente.startIndex] = corrente;
+		xBufferCorrente.startIndex++;
+
+		if (xBufferCorrente.startIndex >= TAMANHO_BUFFER) {
+			xBufferCorrente.startIndex = 0;
+		}
+
+		if (xBufferCorrente.posicoesPreenchidas < TAMANHO_BUFFER) {
+			xBufferCorrente.posicoesPreenchidas++;
+		}
+		xSemaphoreGive(xMutexBufferVelW);
+	}
+}
+
+// função de ler dados de velocidades do buffer circular
+dataset getDadosBuffer(uint16_t index, circle_buffer* buf) {
+	if(buf->posicoesPreenchidas < TAMANHO_BUFFER){
+		return buf->dados[index];
+	}else if (buf->startIndex + index < TAMANHO_BUFFER) {
+		return buf->dados[buf->startIndex + index];
+	} else {
+		return buf->dados[index - (TAMANHO_BUFFER - buf->startIndex) - 1];
 	}
 }
