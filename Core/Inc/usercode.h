@@ -10,22 +10,26 @@
 #include "ILI9341_STM32_Driver.h"
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "semphr.h"
 #include "lookuptable.h"
 
 #define TELA1 1
 #define TELA2 2
 #define TELA3 3
 
-int tela_anterior = TELA1;
-int tela_atual = TELA1;
+uint16_t sTelaAnterior = TELA1;
+uint16_t sTelaAtual = TELA1;
 
-TaskHandle_t displayHandler = NULL;
-TaskHandle_t IRQHandlerScreen1 = NULL;
-TaskHandle_t IRQHandlerScreen2 = NULL;
-TaskHandle_t IRQHandlerScreen3 = NULL;
-QueueHandle_t queueCorrentes;
-QueueHandle_t queueVelAngular;
-QueueHandle_t queuePosicaoGPS;
+TaskHandle_t xHandlerDisplayManager = NULL;
+TaskHandle_t xHandlerIRQScreen1 = NULL;
+TaskHandle_t xHandlerIRQScreen2 = NULL;
+TaskHandle_t xHandlerIRQScreen3 = NULL;
+QueueHandle_t xQueueCorrentes;
+QueueHandle_t xQueueVelW;
+QueueHandle_t xQueuePosicao;
+
+SemaphoreHandle_t xMutexTeste;
+uint16_t sMutexDado = 0;
 
 void vDisplayManager(void *p);
 void vTaskScreenIRQ1(void *p);
@@ -49,67 +53,73 @@ struct Dataset
 // Task Creations e Inicialização do RTOS
 void userRTOS(void){
 
-	queueCorrentes = xQueueCreate(300, sizeof(datasetFormat));
-	queueVelAngular = xQueueCreate(30, sizeof(datasetFormat));
-	queuePosicaoGPS = xQueueCreate(3, sizeof(datasetFormat));
+	xMutexTeste = xSemaphoreCreateMutex();
 
-    xTaskCreate(vTaskScreenIRQ1,
-    			"irq1",
-				128,
-				(void*) 0,
-				tskIDLE_PRIORITY,
-				&IRQHandlerScreen1);
+	xQueueCorrentes = xQueueCreate(300, sizeof(datasetFormat));
+	xQueueVelW = xQueueCreate(30, sizeof(datasetFormat));
+	xQueuePosicao = xQueueCreate(3, sizeof(datasetFormat));
 
-    xTaskCreate(vTaskScreenIRQ2,
-    			"irq2",
-				128,
-				(void*) 0,
-				tskIDLE_PRIORITY,
-				&IRQHandlerScreen2);
+	if(xMutexTeste != NULL){
 
-    xTaskCreate(vTaskScreenIRQ3,
-    			"irq3",
-				128,
-				(void*) 0,
-				tskIDLE_PRIORITY,
-				&IRQHandlerScreen3);
+		xTaskCreate(vTaskScreenIRQ1,
+					"irq1",
+					128,
+					(void*) 0,
+					tskIDLE_PRIORITY,
+					&xHandlerIRQScreen1);
 
-    xTaskCreate(vDisplayManager,
-    			"display",
-				1024,
-				(void*) 0,
-				1,
-				&displayHandler);
+		xTaskCreate(vTaskScreenIRQ2,
+					"irq2",
+					128,
+					(void*) 0,
+					tskIDLE_PRIORITY,
+					&xHandlerIRQScreen2);
 
-    xTaskCreate(vTaskGeradorCorrente,
-        		"geradorCorrente",
-    			512,
-    			(void*) 0,
-    			4,
-    			NULL);
+		xTaskCreate(vTaskScreenIRQ3,
+					"irq3",
+					128,
+					(void*) 0,
+					tskIDLE_PRIORITY,
+					&xHandlerIRQScreen3);
 
-    xTaskCreate(vTaskGeradorVelAngular,
-           		"geradorVelAngular",
-       			512,
-       			(void*) 0,
-       			3,
-       			NULL);
+		xTaskCreate(vDisplayManager,
+					"display",
+					1024,
+					(void*) 0,
+					1,
+					&xHandlerDisplayManager);
 
-    xTaskCreate(vTaskGeradorPosicao,
-               	"geradorPosicao",
-           		512,
-           		(void*) 0,
-           		2,
-           		NULL);
+		xTaskCreate(vTaskGeradorCorrente,
+					"geradorCorrente",
+					512,
+					(void*) 0,
+					4,
+					NULL);
 
-    xTaskCreate(vTaskTestDataReader,
-            	"testDataReader",
-        		512,
-        		(void*) 0,
-        		2,
-        		NULL);
+		xTaskCreate(vTaskGeradorVelAngular,
+					"geradorVelAngular",
+					512,
+					(void*) 0,
+					3,
+					NULL);
 
-    vTaskStartScheduler();
+		xTaskCreate(vTaskGeradorPosicao,
+					"geradorPosicao",
+					512,
+					(void*) 0,
+					2,
+					NULL);
+
+		xTaskCreate(vTaskTestDataReader,
+					"testDataReader",
+					512,
+					(void*) 0,
+					2,
+					NULL);
+
+		vTaskStartScheduler();
+
+	}
 
     while(1){
 
@@ -119,13 +129,22 @@ void userRTOS(void){
 // Task de gerenciamento da tela
 void vDisplayManager(void *p){
 	TickType_t xLastWakeTime;
+	const TickType_t maxDelay = 1;
+	uint16_t sDadoTeste;
 	while(1){
 		xLastWakeTime = xTaskGetTickCount();
-		if(tela_atual != tela_anterior){
-			tela_anterior = tela_atual;
-			baseTela(tela_atual);
+		if(sTelaAtual != sTelaAnterior){
+			sTelaAnterior = sTelaAtual;
+			baseTela(sTelaAtual);
 		}
-		dadosTela(tela_atual);
+		if(xSemaphoreTake(xMutexTeste, maxDelay) == pdPASS){
+			sDadoTeste = sMutexDado;
+			xSemaphoreGive(xMutexTeste);
+		}
+		char teste[8];
+		sprintf(teste, "%d", sDadoTeste);
+		ILI9341_DrawText(teste, FONT3, 165, 170, WHITE, BLACK);
+		//dadosTela(sTelaAtual);
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(250));
 	}
 }
@@ -134,7 +153,7 @@ void vDisplayManager(void *p){
 void vTaskScreenIRQ1(void *p) {
     while (1) {
         vTaskSuspend(NULL);
-        tela_atual = TELA1;
+        sTelaAtual = TELA1;
     }
 }
 
@@ -142,7 +161,7 @@ void vTaskScreenIRQ1(void *p) {
 void vTaskScreenIRQ2(void *p) {
     while (1) {
         vTaskSuspend(NULL);
-        tela_atual = TELA2;
+        sTelaAtual = TELA2;
     }
 }
 
@@ -150,7 +169,7 @@ void vTaskScreenIRQ2(void *p) {
 void vTaskScreenIRQ3(void *p) {
     while (1) {
         vTaskSuspend(NULL);
-        tela_atual = TELA3;
+        sTelaAtual = TELA3;
     }
 }
 
@@ -158,19 +177,19 @@ void vTaskScreenIRQ3(void *p) {
 void vTaskGeradorCorrente(void *p) {
 	TickType_t xLastWakeTime;
 	struct Dataset correntes;
-	int indice = 0;
+	uint16_t sIndice = 0;
 	while(1) {
 		xLastWakeTime = xTaskGetTickCount();
-		correntes.x = vetorCorrenteX[indice];
-		correntes.y = vetorCorrenteY[indice];
-		correntes.z = vetorCorrenteZ[indice];
+		correntes.x = vetorCorrenteX[sIndice];
+		correntes.y = vetorCorrenteY[sIndice];
+		correntes.z = vetorCorrenteZ[sIndice];
 		correntes.timestamp = xLastWakeTime;
-		if(indice >= LENGTH_LUT){
-			indice = 0;
+		if(sIndice >= LENGTH_LUT){
+			sIndice = 0;
 		}else{
-			indice++;
+			sIndice++;
 		}
-		if(xQueueSendToBack(queueCorrentes, &correntes, 0) == errQUEUE_FULL){
+		if(xQueueSendToBack(xQueueCorrentes, &correntes, 0) == errQUEUE_FULL){
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 		}
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
@@ -181,19 +200,19 @@ void vTaskGeradorCorrente(void *p) {
 void vTaskGeradorVelAngular(void *p) {
 	TickType_t xLastWakeTime;
 	struct Dataset velAngular;
-	int indice = 0;
+	uint16_t sIndice = 0;
 	while(1) {
 		xLastWakeTime = xTaskGetTickCount();
-		velAngular.x = vetorVelAngX[indice];
-		velAngular.y = vetorVelAngY[indice];
-		velAngular.z = vetorVelAngZ[indice];
+		velAngular.x = vetorVelAngX[sIndice];
+		velAngular.y = vetorVelAngY[sIndice];
+		velAngular.z = vetorVelAngZ[sIndice];
 		velAngular.timestamp = xLastWakeTime;
-		if(indice >= LENGTH_LUT){
-			indice = 0;
+		if(sIndice >= LENGTH_LUT){
+			sIndice = 0;
 		}else{
-			indice++;
+			sIndice++;
 		}
-		if(xQueueSendToBack(queueVelAngular, &velAngular, 0) == errQUEUE_FULL){
+		if(xQueueSendToBack(xQueueVelW, &velAngular, 0) == errQUEUE_FULL){
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 		}
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
@@ -204,19 +223,19 @@ void vTaskGeradorVelAngular(void *p) {
 void vTaskGeradorPosicao(void *p) {
 	TickType_t xLastWakeTime;
 	struct Dataset posicao;
-	int indice = 0;
+	uint16_t sIndice = 0;
 	while(1) {
 		xLastWakeTime = xTaskGetTickCount();
-		posicao.x = vetorPosicaoX[indice];
-		posicao.y = vetorPosicaoY[indice];
-		posicao.z = vetorPosicaoZ[indice];
+		posicao.x = vetorPosicaoX[sIndice];
+		posicao.y = vetorPosicaoY[sIndice];
+		posicao.z = vetorPosicaoZ[sIndice];
 		posicao.timestamp = xLastWakeTime;
-		if(indice >= LENGTH_LUT){
-			indice = 0;
+		if(sIndice >= LENGTH_LUT){
+			sIndice = 0;
 		}else{
-			indice++;
+			sIndice++;
 		}
-		if(xQueueSendToBack(queuePosicaoGPS, &posicao, 0) == errQUEUE_FULL){
+		if(xQueueSendToBack(xQueuePosicao, &posicao, 0) == errQUEUE_FULL){
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 		}
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(100));
@@ -226,15 +245,20 @@ void vTaskGeradorPosicao(void *p) {
 // Task de test de leitura de dados da queue
 void vTaskTestDataReader(void *p) {
 	TickType_t xLastWakeTime;
+	const TickType_t maxDelay = 1;
 	struct Dataset corrente;
 	struct Dataset vel;
 	struct Dataset posicao;
 	while (1) {
 		xLastWakeTime = xTaskGetTickCount();
-		while(xQueueReceive(queueCorrentes, &corrente, 0) != errQUEUE_EMPTY);
-		while(xQueueReceive(queueVelAngular, &vel, 0) != errQUEUE_EMPTY);
-		while(xQueueReceive(queuePosicaoGPS, &posicao, 0) != errQUEUE_EMPTY);
-		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(200));
+		while(xQueueReceive(xQueueCorrentes, &corrente, 0) != errQUEUE_EMPTY);
+		while(xQueueReceive(xQueueVelW, &vel, 0) != errQUEUE_EMPTY);
+		while(xQueueReceive(xQueuePosicao, &posicao, 0) != errQUEUE_EMPTY);
+		if(xSemaphoreTake(xMutexTeste, maxDelay) == pdPASS){
+			sMutexDado++;
+			xSemaphoreGive(xMutexTeste);
+		}
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
 	}
 }
 
@@ -242,7 +266,7 @@ void vTaskTestDataReader(void *p) {
 void inicializar(void){
 	ILI9341_Init();
 	ILI9341_SetRotation(SCREEN_HORIZONTAL_2);
-	baseTela(tela_atual);
+	baseTela(sTelaAtual);
 }
 
 // Funções de geração de vídeo
@@ -265,7 +289,7 @@ void funcGraph(void){
 
 // Base da Tela 1
 void funcTela1(void){
-	ILI9341_DrawText("Tela 1 - Velocidades e Posicao", FONT4, 25, 9, WHITE, NAVY);
+	ILI9341_DrawText("Tela 1 - Velocidades e Posicao", FONT4, 25, 11, WHITE, NAVY);
 	ILI9341_DrawText("Vel. X (cm/s):", FONT3, 25, 60, LIGHTBLUE, BLACK);
 	ILI9341_DrawText("Vel. Y (cm/s)", FONT3, 25, 120, MAGENTA, BLACK);
 	ILI9341_DrawText("W (rad/s):", FONT3, 25, 180, YELLOW, BLACK);
@@ -286,7 +310,7 @@ void funcTela1(void){
 
 // Base da Tela 2
 void funcTela2(void){
-	ILI9341_DrawText("Tela 2 - Graficos Vel. Angular", FONT4, 25, 9, WHITE, NAVY);
+	ILI9341_DrawText("Tela 2 - Graficos Vel. Angular", FONT4, 25, 11, WHITE, NAVY);
 	ILI9341_DrawText("rad/s", FONT2, 24, 50, WHITE, BLACK);
 	ILI9341_DrawText("s", FONT2, 295, 182, WHITE, BLACK);
 
@@ -304,7 +328,7 @@ void funcTela2(void){
 
 // Base da Tela 3
 void funcTela3(void){
-	ILI9341_DrawText("Tela 3 - Graficos Correntes", FONT4, 38, 9, WHITE, NAVY);
+	ILI9341_DrawText("Tela 3 - Graficos Correntes", FONT4, 38, 11, WHITE, NAVY);
 	ILI9341_DrawText("A", FONT2, 34, 50, WHITE, BLACK);
 	ILI9341_DrawText("s", FONT2, 295, 182, WHITE, BLACK);
 
@@ -321,10 +345,10 @@ void funcTela3(void){
 }
 
 // Seleção de base de tela
-void baseTela(uint16_t numTela){
+void baseTela(uint16_t sNumTela){
 	ILI9341_DrawFilledRectangleCoord(0, 36, 320, 240, BLACK);
 	ILI9341_DrawFilledRectangleCoord(0, 0, 320, 36, NAVY);
-	switch(numTela){
+	switch(sNumTela){
 		case TELA1:
 			funcTela1();
 			break;
@@ -339,8 +363,8 @@ void baseTela(uint16_t numTela){
 	}
 }
 
-void dadosTela(uint16_t numTela){
-	switch(numTela){
+void dadosTela(uint16_t sNumTela){
+	switch(sNumTela){
 		case TELA1:
 			break;
 		case TELA2:
@@ -357,15 +381,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	BaseType_t checkIfYieldRequired;
     switch(GPIO_Pin) {
         case BTN_1_Pin:
-            checkIfYieldRequired = xTaskResumeFromISR(IRQHandlerScreen1);
+            checkIfYieldRequired = xTaskResumeFromISR(xHandlerIRQScreen1);
             portYIELD_FROM_ISR(checkIfYieldRequired);
             break;
         case BTN_2_Pin:
-            checkIfYieldRequired = xTaskResumeFromISR(IRQHandlerScreen2);
+            checkIfYieldRequired = xTaskResumeFromISR(xHandlerIRQScreen2);
             portYIELD_FROM_ISR(checkIfYieldRequired);
             break;
         case BTN_3_Pin:
-            checkIfYieldRequired = xTaskResumeFromISR(IRQHandlerScreen3);
+            checkIfYieldRequired = xTaskResumeFromISR(xHandlerIRQScreen3);
             portYIELD_FROM_ISR(checkIfYieldRequired);
             break;
         default:
