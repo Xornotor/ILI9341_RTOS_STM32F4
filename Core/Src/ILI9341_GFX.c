@@ -1,5 +1,8 @@
+#include <stdbool.h>
 #include "ILI9341_STM32_Driver.h"
 #include "ILI9341_GFX.h"
+
+#define __SWAP(a,b) { __typeof__(a) temp; temp = a; a = b; b = temp; }
 
 void ILI9341_DrawHollowRectangleCoord(uint16_t X0, uint16_t Y0, uint16_t X1, uint16_t Y1, uint16_t color)
 {
@@ -146,4 +149,86 @@ void ILI9341_DrawText(const char* str, const uint8_t font[], uint16_t X, uint16_
 
 		str++;
 	}
+}
+
+void ILI9341_DrawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color)
+{
+  int16_t dx, dy;
+
+  if(x1 > x0)
+	  dx = x1 - x0;
+  else
+	  dx = x0 - x1;
+
+  if(y1 > y0)
+	  dy = y1 - y0;
+  else
+	  dy = y0 - y1;
+
+  int16_t x, y;
+  int16_t err;
+  int16_t step;
+
+  if (0 == dx) {
+    // vertical line
+    if (0 == dy)
+      { return; } // distance = 0, no line to draw
+	ILI9341_DrawFilledRectangleCoord(x0, y0, 1, dy, color);
+    return;
+  }
+  else if (0 == dy) {
+    // horizontal line
+    if (0 == dx)
+      { return; } // distance = 0, no line to draw
+    ILI9341_DrawFilledRectangleCoord(x0, y0, dx, 1, color);
+    return;
+  }
+
+  bool is_steep = dy > dx;
+  if (is_steep) {
+    __SWAP(x0, y0);
+    __SWAP(x1, y1);
+  }
+
+  if (x0 > x1) {
+    __SWAP(x0, x1);
+    __SWAP(y0, y1);
+  }
+
+  dx = x1 - x0;
+
+  if(y1 > y0)
+	  dy = y1 - y0;
+  else
+	  dy = y0 - y1;
+
+  err = dx >> 1;
+
+  if (y0 < y1)
+    { step = 1; }
+  else
+    { step = -1; }
+
+  while (x0 <= x1) {
+
+    if (is_steep)
+      { x = y0; y = x0; }
+    else
+      { x = x0; y = y0; }
+
+    // continue algorithm even if current pixel is outside of screen
+    // bounds, so that the line is drawn at correct position once
+    // it actually enters screen bounds (if ever).
+    if ( (x >= 0) && (x <= 320) && (y >= 0) && (y <= 240) ) {
+      ILI9341_DrawPixel(x, y, color);
+    }
+
+    err -= dy;
+    if (err < 0) {
+      y0 += step;
+      err += dx;
+    }
+
+    ++x0;
+  }
 }

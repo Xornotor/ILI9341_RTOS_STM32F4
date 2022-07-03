@@ -299,6 +299,7 @@ void funcTela2(void){
 	ILI9341_DrawText("Motor 1", FONT3, 32, 224, BLACK, CYAN);
 	ILI9341_DrawText("Motor 2", FONT3, 132, 224, BLACK, MAGENTA);
 	ILI9341_DrawText("Motor 3", FONT3, 232, 224, BLACK, YELLOW);
+
 }
 
 // Base da Tela 3
@@ -316,6 +317,7 @@ void funcTela3(void){
 	ILI9341_DrawText("Motor 1", FONT3, 32, 224, BLACK, LIGHTBLUE);
 	ILI9341_DrawText("Motor 2", FONT3, 132, 224, BLACK, DARKORANGE);
 	ILI9341_DrawText("Motor 3", FONT3, 232, 224, BLACK, GREENYELLOW);
+
 }
 
 // Seleção de base de tela
