@@ -10,6 +10,7 @@
 #include "ILI9341_STM32_Driver.h"
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "lookuptable.h"
 
 #define TELA1 1
 #define TELA2 2
@@ -22,28 +23,35 @@ TaskHandle_t displayHandler = NULL;
 TaskHandle_t IRQHandlerScreen1 = NULL;
 TaskHandle_t IRQHandlerScreen2 = NULL;
 TaskHandle_t IRQHandlerScreen3 = NULL;
-QueueHandle_t queueTeste;
+QueueHandle_t queueCorrentes;
+QueueHandle_t queueVelAngular;
+QueueHandle_t queuePosicaoGPS;
 
 void vDisplayManager(void *p);
 void vTaskScreenIRQ1(void *p);
 void vTaskScreenIRQ2(void *p);
 void vTaskScreenIRQ3(void *p);
-void vTaskTestDataGenerator(void *p);
+void vTaskGeradorCorrente(void *p);
+void vTaskGeradorVelAngular(void *p);
+void vTaskGeradorPosicao(void *p);
 void vTaskTestDataReader(void *p);
 void baseTela(uint16_t);
 void dadosTela(uint16_t);
 
-struct Teste
+struct Dataset
     {
-        double    xa;
-        double    xb;
-    } Teste_Struct;
+        float x;
+        float y;
+        float z;
+        TickType_t timestamp;
+    } datasetFormat;
 
 // Task Creations e Inicialização do RTOS
 void userRTOS(void){
 
-
-	queueTeste =  xQueueCreate(10, sizeof(Teste_Struct));
+	queueCorrentes = xQueueCreate(300, sizeof(datasetFormat));
+	queueVelAngular = xQueueCreate(30, sizeof(datasetFormat));
+	queuePosicaoGPS = xQueueCreate(3, sizeof(datasetFormat));
 
     xTaskCreate(vTaskScreenIRQ1,
     			"irq1",
@@ -68,23 +76,37 @@ void userRTOS(void){
 
     xTaskCreate(vDisplayManager,
     			"display",
-				512,
+				1024,
 				(void*) 0,
 				1,
 				&displayHandler);
 
-    xTaskCreate(vTaskTestDataGenerator,
-        		"testDataGenerator",
-    			2048,
-    			(void*) 0,
+    xTaskCreate(vTaskGeradorCorrente,
+        		"geradorCorrente",
     			512,
+    			(void*) 0,
+    			4,
     			NULL);
+
+    xTaskCreate(vTaskGeradorVelAngular,
+           		"geradorVelAngular",
+       			512,
+       			(void*) 0,
+       			3,
+       			NULL);
+
+    xTaskCreate(vTaskGeradorPosicao,
+               	"geradorPosicao",
+           		512,
+           		(void*) 0,
+           		2,
+           		NULL);
 
     xTaskCreate(vTaskTestDataReader,
             	"testDataReader",
         		512,
         		(void*) 0,
-        		512,
+        		2,
         		NULL);
 
     vTaskStartScheduler();
@@ -104,7 +126,7 @@ void vDisplayManager(void *p){
 			baseTela(tela_atual);
 		}
 		dadosTela(tela_atual);
-		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(250));
 	}
 }
 
@@ -133,17 +155,70 @@ void vTaskScreenIRQ3(void *p) {
 }
 
 // Task de test de geração de dados e envio pra queue
-void vTaskTestDataGenerator(void *p) {
+void vTaskGeradorCorrente(void *p) {
 	TickType_t xLastWakeTime;
-	struct Teste generated;
-	generated.xa = 1.2;
-	generated.xb = 2.3;
+	struct Dataset correntes;
+	int indice = 0;
 	while(1) {
 		xLastWakeTime = xTaskGetTickCount();
-		if(xQueueSendToBack(queueTeste, &generated, 0) == errQUEUE_FULL)
+		correntes.x = vetorCorrenteX[indice];
+		correntes.y = vetorCorrenteY[indice];
+		correntes.z = vetorCorrenteZ[indice];
+		correntes.timestamp = xLastWakeTime;
+		if(indice >= LENGTH_LUT){
+			indice = 0;
+		}else{
+			indice++;
+		}
+		if(xQueueSendToBack(queueCorrentes, &correntes, 0) == errQUEUE_FULL){
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
-		generated.xa += 0.5;
-		generated.xb += 0.3;
+		}
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
+	}
+}
+
+// Task de test de geração de dados e envio pra queue
+void vTaskGeradorVelAngular(void *p) {
+	TickType_t xLastWakeTime;
+	struct Dataset velAngular;
+	int indice = 0;
+	while(1) {
+		xLastWakeTime = xTaskGetTickCount();
+		velAngular.x = vetorVelAngX[indice];
+		velAngular.y = vetorVelAngY[indice];
+		velAngular.z = vetorVelAngZ[indice];
+		velAngular.timestamp = xLastWakeTime;
+		if(indice >= LENGTH_LUT){
+			indice = 0;
+		}else{
+			indice++;
+		}
+		if(xQueueSendToBack(queueVelAngular, &velAngular, 0) == errQUEUE_FULL){
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
+		}
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
+	}
+}
+
+// Task de test de geração de dados e envio pra queue
+void vTaskGeradorPosicao(void *p) {
+	TickType_t xLastWakeTime;
+	struct Dataset posicao;
+	int indice = 0;
+	while(1) {
+		xLastWakeTime = xTaskGetTickCount();
+		posicao.x = vetorPosicaoX[indice];
+		posicao.y = vetorPosicaoY[indice];
+		posicao.z = vetorPosicaoZ[indice];
+		posicao.timestamp = xLastWakeTime;
+		if(indice >= LENGTH_LUT){
+			indice = 0;
+		}else{
+			indice++;
+		}
+		if(xQueueSendToBack(queuePosicaoGPS, &posicao, 0) == errQUEUE_FULL){
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
+		}
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(100));
 	}
 }
@@ -151,20 +226,17 @@ void vTaskTestDataGenerator(void *p) {
 // Task de test de leitura de dados da queue
 void vTaskTestDataReader(void *p) {
 	TickType_t xLastWakeTime;
-	struct Teste readGenerated;
+	struct Dataset corrente;
+	struct Dataset vel;
+	struct Dataset posicao;
 	while (1) {
 		xLastWakeTime = xTaskGetTickCount();
-		while(xQueueReceive(queueTeste, &readGenerated, 0) != errQUEUE_EMPTY);
-		char testecharcasa1[10];
-		char testecharcasa2[10];
-		sprintf(testecharcasa1, "%0.1f", readGenerated.xa);
-		sprintf(testecharcasa2, "%0.1f", readGenerated.xb);
-		ILI9341_DrawText(testecharcasa1, FONT3, 165, 180, WHITE, BLACK);
-		ILI9341_DrawText(testecharcasa2, FONT3, 165, 205, WHITE, BLACK);
-		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
+		while(xQueueReceive(queueCorrentes, &corrente, 0) != errQUEUE_EMPTY);
+		while(xQueueReceive(queueVelAngular, &vel, 0) != errQUEUE_EMPTY);
+		while(xQueueReceive(queuePosicaoGPS, &posicao, 0) != errQUEUE_EMPTY);
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(200));
 	}
 }
-
 
 // Função de inicialização da tela executada antes da inicialização do RTOS
 void inicializar(void){
@@ -194,22 +266,22 @@ void funcGraph(void){
 // Base da Tela 1
 void funcTela1(void){
 	ILI9341_DrawText("Tela 1 - Velocidades e Posicao", FONT4, 25, 9, WHITE, NAVY);
-	ILI9341_DrawText("Veloc. X:", FONT3, 25, 60, CYAN, BLACK);
-	ILI9341_DrawText("Veloc. Y:", FONT3, 25, 120, MAGENTA, BLACK);
-	ILI9341_DrawText("W:", FONT3, 25, 180, YELLOW, BLACK);
-	ILI9341_DrawText("Pos. X:", FONT3, 165, 60, GREEN, BLACK);
-	ILI9341_DrawText("Pos. Y:", FONT3, 165, 120, RED, BLACK);
+	ILI9341_DrawText("Vel. X (cm/s):", FONT3, 25, 60, LIGHTBLUE, BLACK);
+	ILI9341_DrawText("Vel. Y (cm/s)", FONT3, 25, 120, MAGENTA, BLACK);
+	ILI9341_DrawText("W (rad/s):", FONT3, 25, 180, YELLOW, BLACK);
+	ILI9341_DrawText("Pos. X (cm):", FONT3, 165, 60, GREEN, BLACK);
+	ILI9341_DrawText("Pos. Y (cm):", FONT3, 165, 120, DARKORANGE, BLACK);
 
 	double teste = 12.3456789;
 	char testecharcasa1[20], testecharcasa2[20], testecharcasarad[20];
-	sprintf(testecharcasa1, "%0.1f cm/s   ", teste);
-	sprintf(testecharcasarad, "%0.1f rad/s   ", teste);
-	sprintf(testecharcasa2, "%0.2f cm   ", teste);
-	ILI9341_DrawText(testecharcasa1, FONT4, 25, 80, CYAN, BLACK);
+	sprintf(testecharcasa1, "%0.1f   ", teste);
+	sprintf(testecharcasarad, "%0.1f   ", teste);
+	sprintf(testecharcasa2, "%0.2f   ", teste);
+	ILI9341_DrawText(testecharcasa1, FONT4, 25, 80, LIGHTBLUE, BLACK);
 	ILI9341_DrawText(testecharcasa1, FONT4, 25, 140, MAGENTA, BLACK);
 	ILI9341_DrawText(testecharcasarad, FONT4, 25, 200, YELLOW, BLACK);
 	ILI9341_DrawText(testecharcasa2, FONT4, 165, 80, GREEN, BLACK);
-	ILI9341_DrawText(testecharcasa2, FONT4, 165, 140, RED, BLACK);
+	ILI9341_DrawText(testecharcasa2, FONT4, 165, 140, DARKORANGE, BLACK);
 }
 
 // Base da Tela 2
@@ -248,8 +320,8 @@ void funcTela3(void){
 
 // Seleção de base de tela
 void baseTela(uint16_t numTela){
-	ILI9341_DrawFilledRectangleCoord(0, 0, 320, 36, NAVY);
 	ILI9341_DrawFilledRectangleCoord(0, 36, 320, 240, BLACK);
+	ILI9341_DrawFilledRectangleCoord(0, 0, 320, 36, NAVY);
 	switch(numTela){
 		case TELA1:
 			funcTela1();
