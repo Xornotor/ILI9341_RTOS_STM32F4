@@ -8,8 +8,9 @@ A aplicação é uma prova de conceito em um cenário de testes simulando a moni
 
 Foram criados os seguintes tipos de tasks:
 
-*   Tasks para gerenciamento das informações do display;
+*   Tasks para gerenciamento do display;
 *   Tasks para gerenciamento de interrupções requisitadas pelos botões (para comutação das informações do display);
-*   Tasks para geração de dados para o cenário de simulação.
+*   Tasks para geração de dados para o cenário de simulação;
+*   Tasks para leitura dos dados gerados via queue e gravação em buffer circular.
 
 Os dados gerados não necessariamente condizem com valores esperados em um cenário real.
