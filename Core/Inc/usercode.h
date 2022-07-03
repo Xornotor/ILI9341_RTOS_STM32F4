@@ -35,6 +35,10 @@ uint16_t sTelaAtual = TELA1;
 
 dataset xVelLinearAtual;
 dataset xPosicaoAtual;
+circle_buffer xBufferCorrente;
+circle_buffer xBufferVelocidade;
+xBufferVelocidade.posicoesPreenchidas = 0;
+xBufferCorrente.posicoesPreenchidas = 0;
 
 /* ===========================HANDLERS============================ */
 
@@ -263,7 +267,7 @@ void vTaskQueueCorrenteReader(void *p) {
 		xLastWakeTime = xTaskGetTickCount();
 		while(xQueueReceive(xQueueCorrente, &corrente, 0) != errQUEUE_EMPTY){
 			if(xSemaphoreTake(xMutexBufferCorrente, xMaxMutexDelay) == pdPASS){
-
+				insereDadosCorrente(corrente);
 			}
 		}
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
@@ -291,7 +295,7 @@ void vTaskQueueVelWReader(void *p) {
 		xLastWakeTime = xTaskGetTickCount();
 		while(xQueueReceive(xQueueVelW, &velW, 0) != errQUEUE_EMPTY){
 			if(xSemaphoreTake(xMutexBufferVelW, xMaxMutexDelay) == pdPASS){
-
+				insereDadosVelocidade(velW);
 			}
 		}
 		linearVX = r_cm*(2.0/3.0)*(-(sin_alpha1*velW.x)-(sin_alpha2*velW.y)-(sin_alpha3*velW.z));
@@ -514,5 +518,53 @@ void dadosTela(uint16_t sNumTela){
 			break;
 		default:
 			break;
+	}
+}
+
+// Função de adicionar dados ao buffer circular de velocidade
+void insereDadosVelocidade(dataset velocidade) {
+	xBufferVelocidade.dados[xBufferVelocidade.startIndex] = velocidade;
+	xBufferVelocidade.startIndex++;
+
+	if (xBufferVelocidade.startIndex >= TAMANHO_BUFFER) {
+		xBufferVelocidade.startIndex = 0;
+	}
+
+	if (xBufferVelocidade.posicoesPreenchidas < TAMANHO_BUFFER) {
+		xBufferVelocidade.posicoesPreenchidas++;
+	}
+
+}
+
+// Função de adicionar dados ao buffer circular de corrent
+void insereDadosCorrente(dataset corrente) {
+	xBufferCorrente.dados[xBufferCorrente.startIndex] = corrente;
+	xBufferCorrente.startIndex++;
+
+	if (xBufferCorrente.startIndex >= TAMANHO_BUFFER) {
+		xBufferCorrente.startIndex = 0;
+	}
+
+	if (xBufferCorrente.posicoesPreenchidas < TAMANHO_BUFFER) {
+		xBufferCorrente.posicoesPreenchidas++;
+	}
+}
+
+// função de ler dados de velocidades do buffer circular
+dataset getDadosVelocidade(int index) {
+	if (xBufferVelocidade.startIndex + index < TAMANHO_BUFFER) {
+		return xBufferVelocidade.dados[xBufferVelocidade.startIndex + index];
+	} else {
+		return xBufferVelocidade.dados[index - (TAMANHO_BUFFER - xBufferVelocidade.startIndex) - 1];
+	}
+}
+
+// função de ler dados de corrente do buffer circular
+dataset getDadosCorrente(int index) {
+	if (xBufferCorrente.startIndex + index < TAMANHO_BUFFER) {
+			return xBufferCorrente.dados[xBufferCorrente.startIndex + index];
+		} else {
+			return xBufferCorrente.dados[index - (TAMANHO_BUFFER - xBufferCorrente.startIndex) - 1];
+		}
 	}
 }
