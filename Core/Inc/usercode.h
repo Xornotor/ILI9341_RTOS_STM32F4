@@ -25,7 +25,7 @@
 #define TELA2 2
 #define TELA3 3
 
-#define REFRESH_TELA 300
+#define REFRESH_TELA 500
 
 uint16_t sTelaAnterior = TELA1;
 uint16_t sTelaAtual = TELA1;
@@ -385,8 +385,8 @@ void inicializar(void){
 
 // Base para plotagem de gráfico
 void funcBaseGraph(void){
-	ILI9341_DrawFilledRectangleCoord(35, 70, 39, 190, WHITE);
-	ILI9341_DrawFilledRectangleCoord(35, 186, 285, 190, WHITE);
+	ILI9341_DrawRectangle(35, 70, 4, 120, WHITE);
+	ILI9341_DrawRectangle(35, 186, 250, 4, WHITE);
 	ILI9341_DrawVLine(40, 186, 11, WHITE);
 	ILI9341_DrawVLine(99, 186, 11, WHITE);
 	ILI9341_DrawVLine(158, 186, 11, WHITE);
@@ -397,6 +397,24 @@ void funcBaseGraph(void){
 	ILI9341_DrawHLine(28, 131, 11, WHITE);
 	ILI9341_DrawHLine(28, 158, 11, WHITE);
 	ILI9341_DrawHLine(28, 185, 11, WHITE);
+}
+
+// Geração de escala do eixo X
+void funcScaleXGraph(uint16_t tempoInicio, uint16_t tempoFim){
+	uint16_t swap_value;
+	if(tempoInicio > tempoFim){
+		swap_value = tempoInicio;
+		tempoInicio = tempoFim;
+		tempoFim = swap_value;
+	}
+	float tmp_value = 0;
+	char textBuffer[20];
+
+	for(int i = 0; i < 5; i++){
+		tmp_value = (tempoInicio+((tempoFim - tempoInicio)*i/4.0));
+		sprintf(textBuffer, "%.0f  ", tmp_value);
+		ILI9341_DrawText(textBuffer, FONT1, 38+(i*59), 202, WHITE, BLACK);
+	}
 }
 
 // Base da Tela 1
@@ -414,12 +432,17 @@ void funcBaseTela2(void){
 	ILI9341_DrawText("Tela 2 - Graficos Vel. Angular", FONT4, 25, 11, WHITE, NAVY);
 	ILI9341_DrawText("rad/s", FONT2, 24, 50, WHITE, BLACK);
 	ILI9341_DrawText("s", FONT2, 295, 182, WHITE, BLACK);
+	ILI9341_DrawText("32", FONT1, 11, 72, WHITE, BLACK);
+	ILI9341_DrawText("24", FONT1, 11, 99, WHITE, BLACK);
+	ILI9341_DrawText("16", FONT1, 11, 126, WHITE, BLACK);
+	ILI9341_DrawText("8", FONT1, 15, 153, WHITE, BLACK);
+	ILI9341_DrawText("0", FONT1, 15, 180, WHITE, BLACK);
 
 	funcBaseGraph();
 
-	ILI9341_DrawFilledRectangleCoord(20, 220, 100, 240, CYAN);
-	ILI9341_DrawFilledRectangleCoord(120, 220, 200, 240, MAGENTA);
-	ILI9341_DrawFilledRectangleCoord(220, 220, 300, 240, YELLOW);
+	ILI9341_DrawRectangle(20, 220, 80, 20, CYAN);
+	ILI9341_DrawRectangle(120, 220, 80, 20, MAGENTA);
+	ILI9341_DrawRectangle(220, 220, 80, 20, YELLOW);
 
 	ILI9341_DrawText("Motor 1", FONT3, 32, 224, BLACK, CYAN);
 	ILI9341_DrawText("Motor 2", FONT3, 132, 224, BLACK, MAGENTA);
@@ -432,12 +455,17 @@ void funcBaseTela3(void){
 	ILI9341_DrawText("Tela 3 - Graficos Correntes", FONT4, 38, 11, WHITE, NAVY);
 	ILI9341_DrawText("A", FONT2, 34, 50, WHITE, BLACK);
 	ILI9341_DrawText("s", FONT2, 295, 182, WHITE, BLACK);
+	ILI9341_DrawText("4", FONT1, 15, 72, WHITE, BLACK);
+	ILI9341_DrawText("3", FONT1, 15, 99, WHITE, BLACK);
+	ILI9341_DrawText("2", FONT1, 15, 126, WHITE, BLACK);
+	ILI9341_DrawText("1", FONT1, 15, 153, WHITE, BLACK);
+	ILI9341_DrawText("0", FONT1, 15, 180, WHITE, BLACK);
 
 	funcBaseGraph();
 
-	ILI9341_DrawFilledRectangleCoord(20, 220, 100, 240, LIGHTBLUE);
-	ILI9341_DrawFilledRectangleCoord(120, 220, 200, 240, DARKORANGE);
-	ILI9341_DrawFilledRectangleCoord(220, 220, 300, 240, GREENYELLOW);
+	ILI9341_DrawRectangle(20, 220, 80, 20, LIGHTBLUE);
+	ILI9341_DrawRectangle(120, 220, 80, 20, DARKORANGE);
+	ILI9341_DrawRectangle(220, 220, 80, 20, GREENYELLOW);
 
 	ILI9341_DrawText("Motor 1", FONT3, 32, 224, BLACK, LIGHTBLUE);
 	ILI9341_DrawText("Motor 2", FONT3, 132, 224, BLACK, DARKORANGE);
@@ -447,8 +475,8 @@ void funcBaseTela3(void){
 
 // Seleção de base de tela
 void baseTela(uint16_t sNumTela){
-	ILI9341_DrawFilledRectangleCoord(0, 36, 320, 240, BLACK);
-	ILI9341_DrawFilledRectangleCoord(0, 0, 320, 36, NAVY);
+	ILI9341_DrawRectangle(0, 36, 320, 204, BLACK);
+	ILI9341_DrawRectangle(0, 0, 320, 36, NAVY);
 	switch(sNumTela){
 		case TELA1:
 			funcBaseTela1();
@@ -493,11 +521,13 @@ void funcDadosTela1(void){
 }
 
 void funcDadosTela2(void){
-
+	ILI9341_DrawRectangle(39, 70, 246, 116, BLACK);
+	funcScaleXGraph(0, 20);
 }
 
 void funcDadosTela3(void){
-
+	ILI9341_DrawRectangle(39, 70, 246, 116, BLACK);
+	funcScaleXGraph(500, 1000);
 }
 
 // Exibição de dados na tela
