@@ -58,19 +58,20 @@ SemaphoreHandle_t xMutexPosicaoAtual = NULL;
 /* ==========================PROTÓTIPOS========================== */
 
 void userRTOS(void);
-void vDisplayManager(void *p);
-void vTaskGeradorCorrente(void *p);
-void vTaskGeradorVelW(void *p);
-void vTaskGeradorPosicao(void *p);
-void vTaskQueueCorrenteReader(void *p);
-void vTaskQueueVelWReader(void *p);
-void vTaskQueuePosicaoReader(void *p);
-void vTaskScreenIRQ1(void *p);
-void vTaskScreenIRQ2(void *p);
-void vTaskScreenIRQ3(void *p);
+void vDisplayManager(void*);
+void vTaskGeradorCorrente(void*);
+void vTaskGeradorVelW(void*);
+void vTaskGeradorPosicao(void*);
+void vTaskQueueCorrenteReader(void*);
+void vTaskQueueVelWReader(void*);
+void vTaskQueuePosicaoReader(void*);
+void vTaskScreenIRQ1(void*);
+void vTaskScreenIRQ2(void*);
+void vTaskScreenIRQ3(void*);
 void HAL_GPIO_EXTI_Callback(uint16_t);
 void inicializar(void);
 void funcBaseGraph(void);
+void funcScaleXGraph(TickType_t, TickType_t);
 void funcBaseTela1(void);
 void funcBaseTela2(void);
 void funcBaseTela3(void);
@@ -406,14 +407,14 @@ void funcBaseGraph(void){
 }
 
 // Geração de escala do eixo X
-void funcScaleXGraph(uint16_t tempoInicio, uint16_t tempoFim){
+void funcScaleXGraph(TickType_t tempoInicio, TickType_t tempoFim){
 	float tmp_value = 0;
 	char textBuffer[20];
 
 	for(int i = 0; i < 5; i++){
-		tmp_value = (tempoInicio+((tempoFim - tempoInicio)*i/4.0));
-		sprintf(textBuffer, "%.0f  ", tmp_value);
-		ILI9341_DrawText(textBuffer, FONT1, 38+(i*59), 202, WHITE, BLACK);
+		tmp_value = (tempoInicio+((tempoFim - tempoInicio)*i/4.0))/1000.0;
+		sprintf(textBuffer, "%.2f  ", tmp_value);
+		ILI9341_DrawText(textBuffer, FONT1, 31+(i*59), 202, WHITE, BLACK);
 	}
 }
 
@@ -609,7 +610,7 @@ void insereDadosVelocidade(dataset velocidade) {
 	}
 }
 
-// Função de adicionar dados ao buffer circular de corrent
+// Função de adicionar dados ao buffer circular de corrente
 void insereDadosCorrente(dataset corrente) {
 	const TickType_t xMaxMutexDelay = pdMS_TO_TICKS(1);
 	if(xSemaphoreTake(xMutexBufferCorrente, xMaxMutexDelay) == pdPASS){
